@@ -1,68 +1,70 @@
-package com.demo.first.app;
+package com.demo.first.app.controller;
 
+import com.demo.first.app.model.User;
+import com.demo.first.app.service.UserService;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.logging.Logger;
 
 @RestController
 @RequestMapping("/user")
 public class UserController {
-    private Map<Integer,User> userdb = new HashMap<>();
+    private UserService userService = new UserService();
+
+
+
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
 
     @PostMapping
     public ResponseEntity<User> createdUser(@RequestBody User user){
-        userdb.putIfAbsent(user.getId(),user);
-//        return ResponseEntity.status(HttpStatus.CREATED)
-//                .body(user);
+        User createdUser = userService.createUser(user);
         return new ResponseEntity<>(user,HttpStatus.CREATED);
     }
 
     @PutMapping
      public ResponseEntity<User> updatedUser(@RequestBody User user){
-        if(!userdb.containsKey(user.getId()))
-        //    return ResponseEntity.notFound().build();
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build() ;
-            userdb.put(user.getId(),user);
-        return ResponseEntity.status(HttpStatus.OK).body(user) ;
-        //return ResponseEntity.ok(user);
+        User updated = userService.updateUser(user);
+        if(updated == null)
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        return ResponseEntity.status(HttpStatus.OK).body(updated) ;
+        //return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deletedUser(@PathVariable int id){
-        if(!userdb.containsKey(id))
-            //    return ResponseEntity.notFound().build();
+        boolean isDeleted = userService.deleteUser(id);
+        if(!isDeleted)
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build() ;
-        userdb.remove(id);
         return ResponseEntity.ok("User Deleted");
     }
 
     @GetMapping
     public List<User> getUser(){
-        return new ArrayList<>(userdb.values());
+        return userService.getAllUsers() ;
     }
     // /user/1
     @GetMapping("/{userid}")
     public ResponseEntity<User> getUser(
             @PathVariable(value = "userid", required = false) int id){
-        if(!userdb.containsKey(id))
+        User user = userService.getUserById(id);
+        if(user == null)
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build() ;
-        return ResponseEntity.ok(userdb.get(id));
+        return ResponseEntity.ok(user);
     }
 
     @GetMapping("/{userid}/order/{orderid}")
     public ResponseEntity<User> getUserOrder(@PathVariable("userid") int id,
                                              @PathVariable int orderid){
-        System.out.println("ORDER ID: "+ orderid);
-        if(!userdb.containsKey(orderid))
+        User user = userService.getUserById(id);
+        if(user == null)
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build() ;
-        return ResponseEntity.ok(userdb.get(orderid));
+        return ResponseEntity.ok(user);
     }
 
     // search ?name=abhi
@@ -70,17 +72,19 @@ public class UserController {
     public ResponseEntity<List<User>> searchUser(
             @RequestParam(required = false, defaultValue = "achal") String name,
             @RequestParam(required = false, defaultValue = "email") String email
-        ){
-        System.out.println(name);
-        List<User> users = userdb.values().stream()
-                .filter(a -> a.getName().equalsIgnoreCase(name))
-                .filter(a -> a.getName().equalsIgnoreCase(email))
-                .toList();
-        return ResponseEntity.ok(users);
+            ){
+        return ResponseEntity.ok(userService.searchUser(name,email));
     }
 
     @GetMapping("/info")
-    public String getInfo(@RequestHeader("User-Agent") String userAgent){
-        return "User Agent: "+ userAgent;
+    public String getInfo(
+            @PathVariable int id,
+            @RequestParam String name,
+            @RequestHeader("User-Agent") String userAgent){
+        return "User Agent: "+ userAgent
+                +" : "+ id
+                +" : "+ name;
     }
+
+
 }
