@@ -2,20 +2,16 @@ package com.demo.first.app.controller;
 
 import com.demo.first.app.model.User;
 import com.demo.first.app.service.UserService;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.logging.Logger;
 
 @RestController
 @RequestMapping("/user")
 public class UserController {
-    private UserService userService = new UserService();
-
-
+    private UserService userService ;
 
     public UserController(UserService userService) {
         this.userService = userService;
@@ -24,7 +20,7 @@ public class UserController {
     @PostMapping
     public ResponseEntity<User> createdUser(@RequestBody User user){
         User createdUser = userService.createUser(user);
-        return new ResponseEntity<>(user,HttpStatus.CREATED);
+        return new ResponseEntity<>(createdUser,HttpStatus.CREATED);
     }
 
     @PutMapping
@@ -73,10 +69,10 @@ public class UserController {
             @RequestParam(required = false, defaultValue = "achal") String name,
             @RequestParam(required = false, defaultValue = "email") String email
             ){
-        return ResponseEntity.ok(userService.searchUser(name,email));
+        return ResponseEntity.ok(userService.searchUsers(name,email));
     }
 
-    @GetMapping("/info")
+    @GetMapping("/info{id}")
     public String getInfo(
             @PathVariable int id,
             @RequestParam String name,

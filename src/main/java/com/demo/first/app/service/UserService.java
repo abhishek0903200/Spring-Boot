@@ -1,64 +1,72 @@
 package com.demo.first.app.service;
 
-import com.demo.first.app.controller.UserController;
 import com.demo.first.app.exceptions.UserNotFoundException;
 import com.demo.first.app.model.User;
-
+import com.demo.first.app.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+
 
 @Service
 public class UserService {
-    private Map<Integer, User> userdb = new HashMap<>();
+    private UserRepository userRepository;
     private final Logger logger = LoggerFactory.getLogger(UserService.class);
 
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
+
     public User createUser(User user) {
-        logger.info("Creating user .....INFO");
-        logger.debug("Creating user .....DEBUG");
-        logger.trace("Creating user .....TRACE");
-        logger.warn("Creating user .....WARN");
-        logger.error("Creating user .....ERROR");
+        logger.info("Creating user.... INFO");
+        logger.debug("Creating user.... DEBUG");
+        logger.trace("Creating user.... TRACE");
+        logger.warn("Creating user.... WARN");
+        logger.error("Creating user.... ERROR");
         System.out.println(user.getEmail());
-        userdb.putIfAbsent(user.getId(),user);
-//        return ResponseEntity.status(HttpStatus.CREATED)
-//                .body(user);
-        return user;
+        if(user.getProfile() != null)
+            user.getProfile().setUser(user);
+        if(user.getPosts() != null)
+            user.getPosts().forEach( post -> post.setUser(user));
+        return userRepository.save(user);
+
     }
 
     public User updateUser(User user) {
-        if(!userdb.containsKey(user.getId()))
-            throw new UserNotFoundException("User with ID "+ user.getId()+ " does not exist");
-        userdb.put(user.getId(),user);
-        return user;
+        User existing = userRepository.findById(user.getId())
+                .orElseThrow(
+                        () -> new UserNotFoundException("User with ID " + user.getId() + " does not exist")
+                );
+
+        existing.setName(user.getName());
+        existing.setEmail(user.getEmail());
+        return userRepository.save(existing);
     }
 
     public boolean deleteUser(int id) {
-        if(!userdb.containsKey(id))
-            throw new UserNotFoundException("User with ID "+ id+ " does not exist");
-        userdb.remove(id);
+        if (!userRepository.existsById(id))
+            throw new UserNotFoundException("User with ID " + id + " does not exist");
+        userRepository.deleteById(id);
         return true;
     }
 
     public List<User> getAllUsers() {
-        if(!userdb.isEmpty())
-            throw new NullPointerException("No users found in database");
-        return new ArrayList<>(userdb.values());
+        List<User> users = userRepository.findAll();
+        if (users.isEmpty())
+            throw new NullPointerException("No users found in the database");
+        return users;
     }
 
     public User getUserById(int id) {
-        return userdb.get(id);
+        return userRepository.findById(id)
+                .orElseThrow(
+                        () -> new UserNotFoundException("User with ID " + id + " does not exist")
+                );
     }
 
-    public List<User> searchUser(String name, String email) {
-        return userdb.values().stream()
-                .filter(a -> a.getName().equalsIgnoreCase(name))
-                .filter(a -> a.getEmail().equalsIgnoreCase(email))
-                .toList();
+    public List<User> searchUsers(String name, String email) {
+     return userRepository.findByNameIgnoreCaseAndEmailIgnoreCase(name, email);
     }
 }
